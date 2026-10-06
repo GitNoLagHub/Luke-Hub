@@ -1,4 +1,3 @@
-loadstring([[
 --// DARK MOBILE HUB - LUMBER TYCOON 2
 --// Feito para uso no seu próprio jogo
 --// Compatível com execução Lua
