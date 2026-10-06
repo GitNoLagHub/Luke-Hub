@@ -566,5 +566,3 @@ end
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 
 updateCanvas()
-
-]])
