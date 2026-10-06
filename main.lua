@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Stats = game:GetService("Stats")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 
@@ -235,6 +236,7 @@ end
 local flyEnabled = false
 local flySpeed = 2
 local flyConnection
+local flyVelocity
 local flyWindowVisible = false
 
 local flyOpenButton = makeButton("✈️  ABRIR FLY GUI")
@@ -357,6 +359,11 @@ local function stopFly()
         humanoid.PlatformStand = false
     end
 
+    if flyVelocity then
+        flyVelocity:Destroy()
+        flyVelocity = nil
+    end
+
     if root then
         root.AssemblyLinearVelocity = Vector3.zero
     end
@@ -375,8 +382,15 @@ local function startFly()
     flyToggle.Text = "✈️  FLY: ON"
     humanoid.PlatformStand = true
 
+    flyVelocity = Instance.new("BodyVelocity")
+    flyVelocity.Name = "DarkHubFlyVelocity"
+    flyVelocity.MaxForce = Vector3.new(1e9,1e9,1e9)
+    flyVelocity.P = 50000
+    flyVelocity.Velocity = Vector3.zero
+    flyVelocity.Parent = root
+
     flyConnection = RunService.RenderStepped:Connect(function()
-        if not flyEnabled or not root or not root.Parent or not humanoid then
+        if not flyEnabled or not root or not root.Parent or not humanoid or not flyVelocity then
             return
         end
 
@@ -386,23 +400,16 @@ local function startFly()
 
         if move.Magnitude > 0 then
             velocity = move.Unit * (35 * flySpeed)
-
             local lookY = camera.CFrame.LookVector.Y
-
-            if math.abs(lookY) > 0.15 then
-                velocity = velocity + Vector3.new(
-                    0,
-                    lookY * (30 * flySpeed),
-                    0
-                )
+            if math.abs(lookY) > 0.12 then
+                velocity = velocity + Vector3.new(0, lookY * (28 * flySpeed), 0)
             end
         end
 
-        root.AssemblyLinearVelocity = velocity
-        root.CFrame = CFrame.lookAt(
-            root.Position,
-            root.Position + camera.CFrame.LookVector
-        )
+        -- BodyVelocity mantém força vertical constante; ao soltar o direcional,
+        -- a velocidade vira zero e o personagem fica parado no ar em vez de cair.
+        flyVelocity.Velocity = velocity
+        root.CFrame = CFrame.lookAt(root.Position, root.Position + camera.CFrame.LookVector)
     end)
 end
 
@@ -426,11 +433,14 @@ end)
 
 flyOpenButton.MouseButton1Click:Connect(function()
     flyWindowVisible = not flyWindowVisible
-    flyWindow.Visible = flyWindowVisible
-
     if flyWindowVisible then
+        flyWindow.Visible = true
+        flyWindow.Size = UDim2.fromOffset(230,175)
+        TweenService:Create(flyWindow,TweenInfo.new(0.22,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.fromOffset(250,195)}):Play()
         flyOpenButton.Text = "✈️  FECHAR FLY GUI"
     else
+        TweenService:Create(flyWindow,TweenInfo.new(0.16,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=UDim2.fromOffset(230,175)}):Play()
+        task.delay(0.16,function() if not flyWindowVisible then flyWindow.Visible=false end end)
         flyOpenButton.Text = "✈️  ABRIR FLY GUI"
     end
 end)
@@ -488,8 +498,8 @@ local statsButton = makeButton("📊  MOSTRAR FPS / PING")
 local statsOverlay = Instance.new("Frame")
 statsOverlay.Size = UDim2.fromOffset(195,42)
 statsOverlay.Position = UDim2.new(0.5,-97,0,12)
-statsOverlay.BackgroundColor3 = Color3.fromRGB(15,15,15)
-statsOverlay.BackgroundTransparency = 0.08
+statsOverlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+statsOverlay.BackgroundTransparency = 1
 statsOverlay.BorderSizePixel = 0
 statsOverlay.Visible = false
 statsOverlay.ZIndex = 50
@@ -511,6 +521,56 @@ statsLabel.Font = Enum.Font.GothamBold
 statsLabel.TextXAlignment = Enum.TextXAlignment.Center
 statsLabel.ZIndex = 51
 statsLabel.Parent = statsOverlay
+
+local statsDragging = false
+local statsDragStart
+local statsStartPos
+local statsResizing = false
+local statsResizeStart
+local statsOriginalSize
+
+local statsHandle = Instance.new("TextButton")
+statsHandle.Size = UDim2.fromOffset(28,28)
+statsHandle.Position = UDim2.new(1,-28,1,-28)
+statsHandle.BackgroundTransparency = 1
+statsHandle.Text = "↘"
+statsHandle.TextColor3 = Color3.fromRGB(150,150,150)
+statsHandle.TextSize = 15
+statsHandle.ZIndex = 52
+statsHandle.Parent = statsOverlay
+
+statsOverlay.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        statsDragging = true
+        statsDragStart = input.Position
+        statsStartPos = statsOverlay.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then statsDragging = false end
+        end)
+    end
+end)
+
+statsHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        statsResizing = true
+        statsResizeStart = input.Position
+        statsOriginalSize = statsOverlay.Size
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then statsResizing = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+    if statsDragging and not statsResizing then
+        local d = input.Position - statsDragStart
+        statsOverlay.Position = UDim2.new(statsStartPos.X.Scale,statsStartPos.X.Offset+d.X,statsStartPos.Y.Scale,statsStartPos.Y.Offset+d.Y)
+    elseif statsResizing then
+        local d = input.Position - statsResizeStart
+        statsOverlay.Size = UDim2.fromOffset(math.clamp(statsOriginalSize.X.Offset+d.X,130,320),math.clamp(statsOriginalSize.Y.Offset+d.Y,32,90))
+    end
+end)
 
 statsButton.MouseButton1Click:Connect(function()
     statsVisible = not statsVisible
@@ -690,7 +750,7 @@ end
 local function refreshCalculator()
     if expression == "" then
         expressionLabel.Text = ""
-         display.Text = "0"
+        display.Text = "0"
         resultLabel.Text = "Resultado: 0"
         return
     end
@@ -774,6 +834,41 @@ for _,key in ipairs(calcKeys) do
     end)
 end
 
+-- Redimensionar calculadora para telas de celular
+local calcResize = Instance.new("TextButton")
+calcResize.Size = UDim2.fromOffset(30,30)
+calcResize.Position = UDim2.new(1,-30,1,-30)
+calcResize.BackgroundTransparency = 1
+calcResize.Text = "↘"
+calcResize.TextColor3 = Color3.fromRGB(145,145,145)
+calcResize.TextSize = 18
+calcResize.ZIndex = 25
+calcResize.Parent = calculator
+
+local calcResizing = false
+local calcResizeStart
+local calcOriginalSize
+
+calcResize.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        calcResizing = true
+        calcResizeStart = input.Position
+        calcOriginalSize = calculator.Size
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then calcResizing = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if calcResizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local d = input.Position - calcResizeStart
+        local w = math.clamp(calcOriginalSize.X.Offset+d.X,280,500)
+        local h = math.clamp(calcOriginalSize.Y.Offset+d.Y,390,700)
+        calculator.Size = UDim2.fromOffset(w,h)
+    end
+end)
+
 --==================================================
 -- ARRASTAR CALCULADORA
 --==================================================
@@ -816,10 +911,13 @@ end)
 
 calcButton.MouseButton1Click:Connect(function()
     calculator.Visible = true
+    calculator.Size = UDim2.fromOffset(315,445)
+    TweenService:Create(calculator,TweenInfo.new(0.22,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.fromOffset(335,475)}):Play()
 end)
 
 calcClose.MouseButton1Click:Connect(function()
-    calculator.Visible = false
+    TweenService:Create(calculator,TweenInfo.new(0.15,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=UDim2.fromOffset(315,445)}):Play()
+    task.delay(0.15,function() calculator.Visible=false end)
 end)
 
 --==================================================
