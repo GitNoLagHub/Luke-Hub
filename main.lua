@@ -93,6 +93,14 @@ close.TextSize = 28
 close.Font = Enum.Font.GothamBold
 close.Parent = titleBar
 
+-- Entrada suave do hub
+main.Size = UDim2.fromOffset(305,395)
+main.BackgroundTransparency = 0.08
+TweenService:Create(main, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.fromOffset(330,420),
+    BackgroundTransparency = 0
+}):Play()
+
 --==================================================
 -- ARRASTAR HUB
 --==================================================
@@ -275,9 +283,20 @@ flyTitle.TextXAlignment = Enum.TextXAlignment.Left
 flyTitle.ZIndex = 32
 flyTitle.Parent = flyHeader
 
+local flyMinimize = Instance.new("TextButton")
+flyMinimize.Size = UDim2.fromOffset(38,40)
+flyMinimize.Position = UDim2.new(1,-80,0,2)
+flyMinimize.BackgroundTransparency = 1
+flyMinimize.Text = "−"
+flyMinimize.TextColor3 = Color3.fromRGB(190,190,190)
+flyMinimize.TextSize = 23
+flyMinimize.Font = Enum.Font.GothamBold
+flyMinimize.ZIndex = 32
+flyMinimize.Parent = flyHeader
+
 local flyClose = Instance.new("TextButton")
-flyClose.Size = UDim2.fromOffset(40,40)
-flyClose.Position = UDim2.new(1,-43,0,2)
+flyClose.Size = UDim2.fromOffset(38,40)
+flyClose.Position = UDim2.new(1,-42,0,2)
 flyClose.BackgroundTransparency = 1
 flyClose.Text = "×"
 flyClose.TextColor3 = Color3.new(1,1,1)
@@ -285,6 +304,23 @@ flyClose.TextSize = 26
 flyClose.Font = Enum.Font.GothamBold
 flyClose.ZIndex = 32
 flyClose.Parent = flyHeader
+
+local flyRestore = Instance.new("TextButton")
+flyRestore.Size = UDim2.fromOffset(48,48)
+flyRestore.Position = UDim2.new(1,-62,0,72)
+flyRestore.BackgroundColor3 = Color3.fromRGB(18,18,18)
+flyRestore.BackgroundTransparency = 0.08
+flyRestore.Text = "✈"
+flyRestore.TextColor3 = Color3.fromRGB(105,255,130)
+flyRestore.TextSize = 21
+flyRestore.Font = Enum.Font.GothamBold
+flyRestore.Visible = false
+flyRestore.ZIndex = 60
+flyRestore.Parent = gui
+Instance.new("UICorner",flyRestore).CornerRadius = UDim.new(1,0)
+local flyRestoreStroke = Instance.new("UIStroke")
+flyRestoreStroke.Color = Color3.fromRGB(70,160,90)
+flyRestoreStroke.Parent = flyRestore
 
 local flyToggle = Instance.new("TextButton")
 flyToggle.Size = UDim2.new(1,-24,0,48)
@@ -431,24 +467,50 @@ speedPlus.MouseButton1Click:Connect(function()
     speedValue.Text = tostring(flySpeed)
 end)
 
+local flyMinimized = false
+
+local function showFlyWindow()
+    flyWindowVisible = true
+    flyMinimized = false
+    flyRestore.Visible = false
+    flyWindow.Visible = true
+    flyWindow.Size = UDim2.fromOffset(220,170)
+    TweenService:Create(flyWindow,TweenInfo.new(0.24,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.fromOffset(250,195)}):Play()
+    flyOpenButton.Text = "✈️  FECHAR FLY GUI"
+end
+
+local function hideFlyWindow(minimize)
+    flyWindowVisible = false
+    flyMinimized = minimize == true
+    local target = UDim2.fromOffset(220,170)
+    TweenService:Create(flyWindow,TweenInfo.new(0.16,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=target}):Play()
+    task.delay(0.16,function()
+        if not flyWindowVisible then
+            flyWindow.Visible = false
+            flyRestore.Visible = flyMinimized
+        end
+    end)
+    flyOpenButton.Text = "✈️  ABRIR FLY GUI"
+end
+
 flyOpenButton.MouseButton1Click:Connect(function()
-    flyWindowVisible = not flyWindowVisible
     if flyWindowVisible then
-        flyWindow.Visible = true
-        flyWindow.Size = UDim2.fromOffset(230,175)
-        TweenService:Create(flyWindow,TweenInfo.new(0.22,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.fromOffset(250,195)}):Play()
-        flyOpenButton.Text = "✈️  FECHAR FLY GUI"
+        hideFlyWindow(false)
     else
-        TweenService:Create(flyWindow,TweenInfo.new(0.16,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=UDim2.fromOffset(230,175)}):Play()
-        task.delay(0.16,function() if not flyWindowVisible then flyWindow.Visible=false end end)
-        flyOpenButton.Text = "✈️  ABRIR FLY GUI"
+        showFlyWindow()
     end
 end)
 
+flyMinimize.MouseButton1Click:Connect(function()
+    hideFlyWindow(true)
+end)
+
+flyRestore.MouseButton1Click:Connect(function()
+    showFlyWindow()
+end)
+
 flyClose.MouseButton1Click:Connect(function()
-    flyWindowVisible = false
-    flyWindow.Visible = false
-    flyOpenButton.Text = "✈️  ABRIR FLY GUI"
+    hideFlyWindow(false)
 end)
 
 -- Arrastar Fly GUI
@@ -531,7 +593,7 @@ local statsOriginalSize
 
 local statsHandle = Instance.new("TextButton")
 statsHandle.Size = UDim2.fromOffset(28,28)
-statsHandle.Position = UDim2.new(1,-28,1,-28)
+statsHandle.Position = UDim2.new(1,-28,0,0)
 statsHandle.BackgroundTransparency = 1
 statsHandle.Text = "↘"
 statsHandle.TextColor3 = Color3.fromRGB(150,150,150)
@@ -540,6 +602,7 @@ statsHandle.ZIndex = 52
 statsHandle.Parent = statsOverlay
 
 statsOverlay.InputBegan:Connect(function(input)
+    if input.Target == statsHandle then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         statsDragging = true
         statsDragStart = input.Position
@@ -611,76 +674,101 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --==================================================
--- CALCULADORA
+-- CALCULADORA MOBILE
+-- Compacta, redimensionável pelo TOPO e com teclas que acompanham o tamanho.
 --==================================================
 
 local calcButton = makeButton("🧮  ABRIR CALCULADORA")
 
 local calculator = Instance.new("Frame")
-calculator.Size = UDim2.fromOffset(335,475)
-calculator.Position = UDim2.new(0.5,-167,0.5,-237)
-calculator.BackgroundColor3 = Color3.fromRGB(14,14,14)
+calculator.Size = UDim2.fromOffset(300,430)
+calculator.Position = UDim2.new(0.5,-150,0.5,-215)
+calculator.BackgroundColor3 = Color3.fromRGB(10,10,11)
 calculator.BorderSizePixel = 0
 calculator.Visible = false
 calculator.ZIndex = 20
 calculator.Parent = gui
-Instance.new("UICorner",calculator).CornerRadius = UDim.new(0,18)
+Instance.new("UICorner",calculator).CornerRadius = UDim.new(0,22)
 
 local calcStroke = Instance.new("UIStroke")
-calcStroke.Color = Color3.fromRGB(65,65,65)
+calcStroke.Color = Color3.fromRGB(52,52,55)
 calcStroke.Thickness = 1
 calcStroke.Parent = calculator
 
+-- Barra superior: arraste e redimensionamento ficam AQUI em cima.
 local calcTitleBar = Instance.new("Frame")
-calcTitleBar.Size = UDim2.new(1,0,0,48)
-calcTitleBar.BackgroundColor3 = Color3.fromRGB(23,23,23)
-calcTitleBar.BorderSizePixel = 0
+calcTitleBar.Size = UDim2.new(1,0,0,44)
+calcTitleBar.BackgroundTransparency = 1
 calcTitleBar.ZIndex = 21
 calcTitleBar.Parent = calculator
 
 local calcTitle = Instance.new("TextLabel")
-calcTitle.Size = UDim2.new(1,-55,1,0)
+calcTitle.Size = UDim2.new(1,-105,1,0)
 calcTitle.Position = UDim2.fromOffset(15,0)
 calcTitle.BackgroundTransparency = 1
-calcTitle.Text = "🧮  Calculadora"
-calcTitle.TextColor3 = Color3.new(1,1,1)
-calcTitle.TextSize = 16
+calcTitle.Text = "🧮  CALCULADORA"
+calcTitle.TextColor3 = Color3.fromRGB(225,225,225)
+calcTitle.TextSize = 14
 calcTitle.Font = Enum.Font.GothamBold
 calcTitle.TextXAlignment = Enum.TextXAlignment.Left
 calcTitle.ZIndex = 22
 calcTitle.Parent = calcTitleBar
 
-local calcClose = Instance.new("TextButton")
-calcClose.Size = UDim2.fromOffset(42,42)
-calcClose.Position = UDim2.new(1,-46,0,3)
-calcClose.BackgroundTransparency = 1
-calcClose.Text = "×"
-calcClose.TextColor3 = Color3.new(1,1,1)
-calcClose.TextSize = 27
-calcClose.Font = Enum.Font.GothamBold
-calcClose.ZIndex = 22
-calcClose.Parent = calcTitleBar
+local calcClearTop = Instance.new("TextButton")
+calcClearTop.Size = UDim2.fromOffset(42,36)
+calcClearTop.Position = UDim2.new(1,-142,0,4)
+calcClearTop.BackgroundColor3 = Color3.fromRGB(28,28,30)
+calcClearTop.Text = "⌫"
+calcClearTop.TextColor3 = Color3.fromRGB(245,105,105)
+calcClearTop.TextSize = 19
+calcClearTop.Font = Enum.Font.GothamBold
+calcClearTop.ZIndex = 23
+calcClearTop.Parent = calcTitleBar
+Instance.new("UICorner",calcClearTop).CornerRadius = UDim.new(0,10)
 
--- Linha da expressão
+local calcResize = Instance.new("TextButton")
+calcResize.Size = UDim2.fromOffset(42,36)
+calcResize.Position = UDim2.new(1,-96,0,4)
+calcResize.BackgroundColor3 = Color3.fromRGB(28,28,30)
+calcResize.Text = "↗"
+calcResize.TextColor3 = Color3.fromRGB(120,255,145)
+calcResize.TextSize = 18
+calcResize.Font = Enum.Font.GothamBold
+calcResize.ZIndex = 23
+calcResize.Parent = calcTitleBar
+Instance.new("UICorner",calcResize).CornerRadius = UDim.new(0,10)
+
+local calcClose = Instance.new("TextButton")
+calcClose.Size = UDim2.fromOffset(42,36)
+calcClose.Position = UDim2.new(1,-48,0,4)
+calcClose.BackgroundColor3 = Color3.fromRGB(28,28,30)
+calcClose.Text = "×"
+calcClose.TextColor3 = Color3.fromRGB(225,225,225)
+calcClose.TextSize = 23
+calcClose.Font = Enum.Font.GothamBold
+calcClose.ZIndex = 23
+calcClose.Parent = calcTitleBar
+Instance.new("UICorner",calcClose).CornerRadius = UDim.new(0,10)
+
+-- Display
 local expressionLabel = Instance.new("TextLabel")
-expressionLabel.Size = UDim2.new(1,-28,0,28)
-expressionLabel.Position = UDim2.fromOffset(14,60)
+expressionLabel.Size = UDim2.new(1,-28,0,20)
+expressionLabel.Position = UDim2.fromOffset(14,49)
 expressionLabel.BackgroundTransparency = 1
 expressionLabel.Text = ""
-expressionLabel.TextColor3 = Color3.fromRGB(150,150,150)
-expressionLabel.TextSize = 13
+expressionLabel.TextColor3 = Color3.fromRGB(125,125,130)
+expressionLabel.TextSize = 12
 expressionLabel.Font = Enum.Font.Gotham
 expressionLabel.TextXAlignment = Enum.TextXAlignment.Right
 expressionLabel.TextTruncate = Enum.TextTruncate.AtEnd
 expressionLabel.ZIndex = 21
 expressionLabel.Parent = calculator
 
--- Display principal
 local display = Instance.new("TextLabel")
 display.Size = UDim2.new(1,-28,0,58)
-display.Position = UDim2.fromOffset(14,86)
-display.BackgroundColor3 = Color3.fromRGB(24,24,24)
-display.TextColor3 = Color3.new(1,1,1)
+display.Position = UDim2.fromOffset(14,69)
+display.BackgroundColor3 = Color3.fromRGB(20,20,22)
+display.TextColor3 = Color3.fromRGB(245,245,245)
 display.Text = "0"
 display.TextSize = 27
 display.Font = Enum.Font.GothamBold
@@ -688,16 +776,15 @@ display.TextXAlignment = Enum.TextXAlignment.Right
 display.TextTruncate = Enum.TextTruncate.AtEnd
 display.ZIndex = 21
 display.Parent = calculator
-Instance.new("UICorner",display).CornerRadius = UDim.new(0,11)
+Instance.new("UICorner",display).CornerRadius = UDim.new(0,13)
 
--- Resultado PREVIEW
 local resultLabel = Instance.new("TextLabel")
-resultLabel.Size = UDim2.new(1,-28,0,25)
-resultLabel.Position = UDim2.fromOffset(14,148)
+resultLabel.Size = UDim2.new(1,-28,0,20)
+resultLabel.Position = UDim2.fromOffset(14,130)
 resultLabel.BackgroundTransparency = 1
 resultLabel.Text = "Resultado: 0"
-resultLabel.TextColor3 = Color3.fromRGB(110,190,130)
-resultLabel.TextSize = 14
+resultLabel.TextColor3 = Color3.fromRGB(105,235,130)
+resultLabel.TextSize = 13
 resultLabel.Font = Enum.Font.GothamMedium
 resultLabel.TextXAlignment = Enum.TextXAlignment.Right
 resultLabel.TextTruncate = Enum.TextTruncate.AtEnd
@@ -705,46 +792,74 @@ resultLabel.ZIndex = 21
 resultLabel.Parent = calculator
 
 local buttonsFrame = Instance.new("Frame")
-buttonsFrame.Size = UDim2.new(1,-28,1,-190)
-buttonsFrame.Position = UDim2.fromOffset(14,180)
+buttonsFrame.Size = UDim2.new(1,-28,1,-164)
+buttonsFrame.Position = UDim2.fromOffset(14,158)
 buttonsFrame.BackgroundTransparency = 1
 buttonsFrame.ZIndex = 21
 buttonsFrame.Parent = calculator
 
 local grid = Instance.new("UIGridLayout")
-grid.CellSize = UDim2.new(0.23,0,0,49)
-grid.CellPadding = UDim2.new(0.025,0,0,8)
+grid.FillDirection = Enum.FillDirection.Horizontal
+grid.FillDirectionMaxCells = 4
+grid.CellSize = UDim2.new(0.25,-6,0.2,-7)
+grid.CellPadding = UDim2.fromOffset(8,8)
+grid.SortOrder = Enum.SortOrder.LayoutOrder
 grid.Parent = buttonsFrame
 
 local expression = ""
 
 local function calculate(exp)
-    if exp == "" then
-        return "0"
-    end
-
-    -- Aceita somente números e operadores matemáticos.
-    if not exp:match("^[%d%+%-%*/%.%(%)%s]+$") then
-        return "Erro"
-    end
-
+    if exp == "" then return "0" end
+    if not exp:match("^[%d%+%-%*/%.%(%)%s]+$") then return "Erro" end
     local ok,result = pcall(function()
         return loadstring("return " .. exp)()
     end)
-
     if ok and type(result) == "number" and result == result then
         return tostring(result)
     end
-
     return "Erro"
 end
 
--- Mantém × e ÷ bonitos na tela.
+-- Formata números em padrão brasileiro sem quebrar a expressão matemática.
+local function formatNumberToken(token)
+    if token == "" then return token end
+    local sign = ""
+    if token:sub(1,1) == "-" then
+        sign = "-"
+        token = token:sub(2)
+    end
+    local intPart, decPart = token:match("^(%d+)(%.%d*)$")
+    if not intPart then
+        intPart = token:match("^(%d+)$")
+        if not intPart then return sign .. token end
+    end
+    local grouped = intPart:reverse():gsub("(%d%d%d)", "%1."):reverse():gsub("^%.", "")
+    if decPart then
+        decPart = decPart:gsub("%.", ",")
+        return sign .. grouped .. decPart
+    end
+    return sign .. grouped
+end
+
 local function displayExpression(exp)
-    return exp
-        :gsub("%*", "×")
-        :gsub("/", "÷")
-        :gsub("%-", "−")
+    local out = ""
+    local i = 1
+    while i <= #exp do
+        local c = exp:sub(i,i)
+        if c:match("[%d%.]") then
+            local j = i
+            while j <= #exp and exp:sub(j,j):match("[%d%.]") do j += 1 end
+            out ..= formatNumberToken(exp:sub(i,j-1))
+            i = j
+        else
+            if c == "*" then out ..= "×"
+            elseif c == "/" then out ..= "÷"
+            elseif c == "-" then out ..= "−"
+            else out ..= c end
+            i += 1
+        end
+    end
+    return out
 end
 
 local function refreshCalculator()
@@ -754,106 +869,99 @@ local function refreshCalculator()
         resultLabel.Text = "Resultado: 0"
         return
     end
-
-    expressionLabel.Text = displayExpression(expression)
-    display.Text = displayExpression(expression)
-
-    -- Resultado aparece enquanto digita.
+    local pretty = displayExpression(expression)
+    expressionLabel.Text = pretty
+    display.Text = pretty
     local preview = calculate(expression)
-
     if preview ~= "Erro" then
-        resultLabel.Text = "Resultado: " .. preview
+        resultLabel.Text = "Resultado: " .. displayExpression(preview)
     else
         resultLabel.Text = "Resultado: —"
     end
 end
 
 local calcKeys = {
+    "C","(",")","%",
     "7","8","9","÷",
     "4","5","6","×",
     "1","2","3","−",
-    "0",".","(",")",
-    "C","⌫","=","+"
+    "0",".","+","="
 }
 
-for _,key in ipairs(calcKeys) do
+for index,key in ipairs(calcKeys) do
     local b = Instance.new("TextButton")
-
+    b.LayoutOrder = index
     if key == "=" then
-        b.BackgroundColor3 = Color3.fromRGB(48,48,48)
-    elseif key == "C" or key == "⌫" then
-        b.BackgroundColor3 = Color3.fromRGB(38,38,38)
+        b.BackgroundColor3 = Color3.fromRGB(55,190,65)
+        b.TextColor3 = Color3.new(1,1,1)
+    elseif key == "C" then
+        b.BackgroundColor3 = Color3.fromRGB(45,28,30)
+        b.TextColor3 = Color3.fromRGB(255,105,105)
+    elseif key == "+" or key == "−" or key == "×" or key == "÷" or key == "%" then
+        b.BackgroundColor3 = Color3.fromRGB(32,32,34)
+        b.TextColor3 = Color3.fromRGB(105,255,130)
     else
-        b.BackgroundColor3 = Color3.fromRGB(29,29,29)
+        b.BackgroundColor3 = Color3.fromRGB(25,25,27)
+        b.TextColor3 = Color3.fromRGB(240,240,242)
     end
-
-    b.TextColor3 = Color3.new(1,1,1)
     b.Text = key
     b.TextSize = 18
     b.Font = Enum.Font.GothamBold
     b.ZIndex = 22
     b.Parent = buttonsFrame
-
-    Instance.new("UICorner",b).CornerRadius = UDim.new(0,10)
+    Instance.new("UICorner",b).CornerRadius = UDim.new(1,0)
 
     b.MouseButton1Click:Connect(function()
         if key == "C" then
             expression = ""
             refreshCalculator()
-
-        elseif key == "⌫" then
-            expression = expression:sub(1,-2)
-            refreshCalculator()
-
+        elseif key == "%" then
+            local n = expression:match("(%d+%.?%d*)$")
+            if n then
+                local startPos = #expression - #n + 1
+                local value = tonumber(n) / 100
+                expression = expression:sub(1,startPos-1) .. tostring(value)
+                refreshCalculator()
+            end
         elseif key == "=" then
             local result = calculate(expression)
-
             if result ~= "Erro" then
                 expression = result
                 expressionLabel.Text = ""
-                display.Text = result
-                resultLabel.Text = "Resultado: " .. result
+                display.Text = displayExpression(result)
+                resultLabel.Text = "Resultado: " .. displayExpression(result)
             else
                 resultLabel.Text = "Resultado: Erro"
             end
-
         else
             local converted = key
-
-            if key == "×" then
-                converted = "*"
-            elseif key == "÷" then
-                converted = "/"
-            elseif key == "−" then
-                converted = "-"
-            end
-
-            expression = expression .. converted
+            if key == "×" then converted = "*"
+            elseif key == "÷" then converted = "/"
+            elseif key == "−" then converted = "-" end
+            expression ..= converted
             refreshCalculator()
         end
     end)
 end
 
--- Redimensionar calculadora para telas de celular
-local calcResize = Instance.new("TextButton")
-calcResize.Size = UDim2.fromOffset(30,30)
-calcResize.Position = UDim2.new(1,-30,1,-30)
-calcResize.BackgroundTransparency = 1
-calcResize.Text = "↘"
-calcResize.TextColor3 = Color3.fromRGB(145,145,145)
-calcResize.TextSize = 18
-calcResize.ZIndex = 25
-calcResize.Parent = calculator
+-- Apagar último caractere pelo botão de cima.
+calcClearTop.MouseButton1Click:Connect(function()
+    expression = expression:sub(1,-2)
+    refreshCalculator()
+end)
 
+-- Redimensionar PELO TOPO. O grid recalcula as teclas junto com a janela.
 local calcResizing = false
 local calcResizeStart
 local calcOriginalSize
+local calcOriginalPosition
 
 calcResize.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         calcResizing = true
         calcResizeStart = input.Position
         calcOriginalSize = calculator.Size
+        calcOriginalPosition = calculator.Position
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then calcResizing = false end
         end)
@@ -863,9 +971,14 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if calcResizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local d = input.Position - calcResizeStart
-        local w = math.clamp(calcOriginalSize.X.Offset+d.X,280,500)
-        local h = math.clamp(calcOriginalSize.Y.Offset+d.Y,390,700)
+        local w = math.clamp(calcOriginalSize.X.Offset + d.X, 270, 430)
+        local h = math.clamp(calcOriginalSize.Y.Offset - d.Y, 360, 620)
         calculator.Size = UDim2.fromOffset(w,h)
+        -- Compensa o ponto de baixo: puxar para cima aumenta/diminui sem cortar o teclado.
+        calculator.Position = UDim2.new(
+            calcOriginalPosition.X.Scale, calcOriginalPosition.X.Offset,
+            calcOriginalPosition.Y.Scale, calcOriginalPosition.Y.Offset + d.Y
+        )
     end
 end)
 
@@ -878,46 +991,33 @@ local calcDragStart
 local calcStartPos
 
 calcTitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-    or input.UserInputType == Enum.UserInputType.Touch then
-
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Não inicia arraste ao tocar nos três controles da barra.
         calcDragging = true
         calcDragStart = input.Position
         calcStartPos = calculator.Position
-
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                calcDragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then calcDragging = false end
         end)
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if calcDragging and
-       (input.UserInputType == Enum.UserInputType.MouseMovement
-       or input.UserInputType == Enum.UserInputType.Touch) then
-
+    if calcDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - calcDragStart
-
-        calculator.Position = UDim2.new(
-            calcStartPos.X.Scale,
-            calcStartPos.X.Offset + delta.X,
-            calcStartPos.Y.Scale,
-            calcStartPos.Y.Offset + delta.Y
-        )
+        calculator.Position = UDim2.new(calcStartPos.X.Scale,calcStartPos.X.Offset+delta.X,calcStartPos.Y.Scale,calcStartPos.Y.Offset+delta.Y)
     end
 end)
 
 calcButton.MouseButton1Click:Connect(function()
     calculator.Visible = true
-    calculator.Size = UDim2.fromOffset(315,445)
-    TweenService:Create(calculator,TweenInfo.new(0.22,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.fromOffset(335,475)}):Play()
+    calculator.Size = UDim2.fromOffset(280,395)
+    TweenService:Create(calculator,TweenInfo.new(0.25,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.fromOffset(300,430)}):Play()
 end)
 
 calcClose.MouseButton1Click:Connect(function()
-    TweenService:Create(calculator,TweenInfo.new(0.15,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=UDim2.fromOffset(315,445)}):Play()
-    task.delay(0.15,function() calculator.Visible=false end)
+    TweenService:Create(calculator,TweenInfo.new(0.16,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=UDim2.fromOffset(280,395)}):Play()
+    task.delay(0.16,function() calculator.Visible=false end)
 end)
 
 --==================================================
